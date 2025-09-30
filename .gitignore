@@ -1,0 +1,22 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Env
+.env
+server/.env
+client/.env
+
+# Build outputs
+client/dist/
+server/build/
+
+# Uploads and generated content
+server/uploads/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

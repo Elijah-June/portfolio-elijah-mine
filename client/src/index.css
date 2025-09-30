@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.markdown p { @apply mb-4 text-gray-200; }
+.markdown h1 { @apply text-3xl font-bold mt-4 mb-2 text-white; }
+.markdown h2 { @apply text-2xl font-semibold mt-3 mb-2 text-gray-100; }
+.markdown a { @apply text-blue-300 underline; }
+.markdown code { @apply bg-white/10 px-1 py-0.5 rounded; }
+.markdown pre { @apply bg-white/10 border border-white/10 p-3 rounded overflow-auto; }
+
+/* Simple animations used by <Animate /> */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade { animation: fadeInUp 300ms ease forwards; }
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-zoom { animation: zoomIn 300ms ease forwards; }
