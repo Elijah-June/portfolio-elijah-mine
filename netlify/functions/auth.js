@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query, successResponse, errorResponse } from './utils/db.js';
 import { 
@@ -55,10 +55,16 @@ export const handler = async (event, context) => {
         return errorResponse('Email and password are required', 400);
       }
       
-      const { rows } = await query(
-        'SELECT id, email, password_hash, role FROM users WHERE email = $1',
-        [email]
-      );
+      let rows;
+      try {
+        ({ rows } = await query(
+          'SELECT id, email, password_hash, role FROM users WHERE email = $1',
+          [email]
+        ));
+      } catch (dbErr) {
+        console.error('Auth login DB error:', dbErr);
+        return errorResponse('Internal server error', 500);
+      }
       
       const user = rows[0];
       if (!user) {
