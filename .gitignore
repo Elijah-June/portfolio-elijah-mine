@@ -9,7 +9,7 @@ server/.env
 client/.env
 
 # Build outputs
-client/dist/
+ client/dist/  # Commented out to track built files
 server/build/
 
 # Uploads and generated content
