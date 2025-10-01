@@ -31,6 +31,7 @@ export default function Navbar() {
             <Link to="/blog">Blog</Link>
             <Link to="/calendar">Calendar</Link>
             <Link to="/typing">Typing</Link>
+            <Link to="/cv">CV</Link>
             {isAdmin && <Link to="/admin">Admin</Link>}
           </nav>
         </div>
@@ -62,18 +63,19 @@ export default function Navbar() {
           </button>
         </div>
       </div>
-      {open && (
-        <div className="md:hidden border-t border-white/10 bg-black/80">
-          <nav className="container mx-auto px-4 py-2 flex flex-col gap-1">
-            <Link to="/" onClick={() => setOpen(false)}>Home</Link>
-            <Link to="/projects" onClick={() => setOpen(false)}>Projects</Link>
-            <Link to="/blog" onClick={() => setOpen(false)}>Blog</Link>
-            <Link to="/calendar" onClick={() => setOpen(false)}>Calendar</Link>
-            <Link to="/typing" onClick={() => setOpen(false)}>Typing</Link>
-            {isAdmin && <Link to="/admin" onClick={() => setOpen(false)}>Admin</Link>}
-          </nav>
-        </div>
-      )}
+          {open && (
+            <div className="md:hidden border-t border-white/10 bg-black/80">
+              <nav className="container mx-auto px-4 py-2 flex flex-col gap-1">
+                <Link to="/" onClick={() => setOpen(false)}>Home</Link>
+                <Link to="/projects" onClick={() => setOpen(false)}>Projects</Link>
+                <Link to="/blog" onClick={() => setOpen(false)}>Blog</Link>
+                <Link to="/calendar" onClick={() => setOpen(false)}>Calendar</Link>
+                <Link to="/typing" onClick={() => setOpen(false)}>Typing</Link>
+                <Link to="/cv" onClick={() => setOpen(false)}>CV</Link>
+                {isAdmin && <Link to="/admin" onClick={() => setOpen(false)}>Admin</Link>}
+              </nav>
+            </div>
+          )}
     </header>
   );
 }

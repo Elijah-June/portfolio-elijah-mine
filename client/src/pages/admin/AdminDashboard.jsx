@@ -33,6 +33,9 @@ export default function AdminDashboard() {
         <Link to="/admin/profile" className="p-4 border border-white/10 rounded bg-white/5 hover:bg-white/10 transition">
           Edit Profile
         </Link>
+        <Link to="/admin/cv" className="p-4 border border-white/10 rounded bg-white/5 hover:bg-white/10 transition">
+          Edit CV
+        </Link>
         <button className="p-4 border border-white/10 rounded bg-white/5 hover:bg-white/10 transition text-left" onClick={() => setOpen(true)}>
           New Blog Post
         </button>

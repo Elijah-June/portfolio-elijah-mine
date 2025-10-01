@@ -12,6 +12,8 @@ import Login from './pages/Login.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminProjects from './pages/admin/AdminProjects.jsx';
 import AdminProfile from './pages/admin/AdminProfile.jsx';
+import CV from './pages/CV.jsx';
+import AdminCV from './pages/admin/AdminCV.jsx';
 import TypingTest from './pages/TypingTest.jsx';
 import NotFound from './pages/NotFound.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -30,11 +32,12 @@ export default function App() {
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/typing" element={<TypingTest />} />
+            <Route path="/cv" element={<CV />} />
             <Route path="/login" element={<Login />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/projects" element={<AdminProjects />} />
               <Route path="/admin/profile" element={<AdminProfile />} />
+              <Route path="/admin/cv" element={<AdminCV />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
