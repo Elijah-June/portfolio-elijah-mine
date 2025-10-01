@@ -1,4 +1,8 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && typeof import.meta.env.VITE_API_URL !== 'undefined')
+  ? import.meta.env.VITE_API_URL
+  : (typeof window !== 'undefined' && window.location.hostname === 'localhost')
+    ? 'http://localhost:4000'
+    : '';
 
 export async function api(path, { method='GET', data, headers={}, body, ...rest } = {}) {
   const isForm = (typeof FormData !== 'undefined') && (data instanceof FormData || body instanceof FormData);
