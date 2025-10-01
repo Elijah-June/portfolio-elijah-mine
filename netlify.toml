@@ -1,24 +1,16 @@
 [build]
-  command = "npm --prefix netlify/functions ci && cd client && npm ci && npm run build"
+  command = "cd client && npm install && npm run build"
   publish = "client/dist"
   functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "20"
-  NPM_FLAGS = "--include=dev"
-
-# Route auth API calls to the Netlify auth function (must come before generic /api/* rule)
-[[redirects]]
-  from = "/api/auth/*"
-  to = "/.netlify/functions/auth/:splat"
-  status = 200
 
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
 
-# Single Page App fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"
