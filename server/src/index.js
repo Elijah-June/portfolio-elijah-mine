@@ -62,9 +62,9 @@ app.use('/api/quotes', quotesRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/uploads', uploadsRoutes);
 
-// static files for uploaded images
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const uploadsPath = path.resolve(__dirname, '..', 'uploads');
+// static files for uploaded images (local server only)
+const __dirnameLocal = path.dirname(url.fileURLToPath(import.meta.url));
+const uploadsPath = path.resolve(__dirnameLocal, '..', 'uploads');
 app.use('/uploads', express.static(uploadsPath));
 
 // Auto-mark today's date as active, schedule daily at local midnight

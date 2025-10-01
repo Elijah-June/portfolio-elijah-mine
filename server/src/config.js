@@ -4,9 +4,9 @@ import url from 'url';
 
 // Load env from server/.env (default) and also try repo root .env (parent dir)
 dotenv.config();
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const serverEnv = path.resolve(__dirname, '..', '.env');
-const rootEnv = path.resolve(__dirname, '..', '..', '.env');
+const __dirnameLocal = path.dirname(url.fileURLToPath(import.meta.url));
+const serverEnv = path.resolve(__dirnameLocal, '..', '.env');
+const rootEnv = path.resolve(__dirnameLocal, '..', '..', '.env');
 dotenv.config({ path: serverEnv });
 dotenv.config({ path: rootEnv });
 
