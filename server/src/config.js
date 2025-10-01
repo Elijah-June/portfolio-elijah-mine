@@ -4,7 +4,10 @@ import url from 'url';
 
 // Load env from server/.env (default) and also try repo root .env (parent dir)
 dotenv.config();
-const __dirnameLocal = path.dirname(url.fileURLToPath(import.meta.url));
+// Support both ESM and environments where import.meta.url may be undefined (e.g., some CJS bundlers)
+const __dirnameLocal = (typeof import.meta !== 'undefined' && import.meta.url)
+  ? path.dirname(url.fileURLToPath(import.meta.url))
+  : process.cwd();
 const serverEnv = path.resolve(__dirnameLocal, '..', '.env');
 const rootEnv = path.resolve(__dirnameLocal, '..', '..', '.env');
 dotenv.config({ path: serverEnv });

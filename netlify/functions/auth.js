@@ -1,9 +1,14 @@
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { query, successResponse, errorResponse } from './utils/db.js';
-import { createToken } from './utils/auth.js';
+import { 
+  createAccessToken, 
+  createRefreshToken, 
+  verifyAccessTokenFromHeader,
+  verifyRefreshToken
+} from './utils/auth.js';
 
-// In a real app, you would want to use environment variables for these
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// In Netlify we return tokens in the response; client can store them
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
@@ -66,8 +71,8 @@ export const handler = async (event, context) => {
       }
       
       const payload = { id: user.id, email: user.email, role: user.role };
-      const accessToken = createToken(payload, { expiresIn: '15m' });
-      const refreshToken = createToken(payload, { expiresIn: '7d' });
+      const accessToken = createAccessToken(payload);
+      const refreshToken = createRefreshToken(payload);
       
       const authData = setAuthCookies(null, accessToken, refreshToken);
       
@@ -93,19 +98,9 @@ export const handler = async (event, context) => {
 
     // GET /auth/me
     if (event.httpMethod === 'GET' && endpoint === 'me') {
-      const authHeader = event.headers.authorization || '';
-      const token = authHeader.split(' ')[1]; // Bearer <token>
-      
-      if (!token) {
-        return errorResponse('Unauthorized', 401);
-      }
-      
-      try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        return successResponse({ user: decoded });
-      } catch (error) {
-        return errorResponse('Invalid token', 401);
-      }
+      const decoded = verifyAccessTokenFromHeader(event.headers.authorization || '');
+      if (!decoded) return errorResponse('Unauthorized', 401);
+      return successResponse({ user: decoded });
     }
 
     // POST /auth/refresh
@@ -116,25 +111,13 @@ export const handler = async (event, context) => {
         return errorResponse('Refresh token is required', 400);
       }
       
-      try {
-        const decoded = jwt.verify(refreshToken, JWT_SECRET);
-        const payload = { 
-          id: decoded.id, 
-          email: decoded.email, 
-          role: decoded.role 
-        };
-        
-        const newAccessToken = createToken(payload, { expiresIn: '15m' });
-        const newRefreshToken = createToken(payload, { expiresIn: '7d' });
-        
-        const authData = setAuthCookies(null, newAccessToken, newRefreshToken);
-        
-        return successResponse({
-          ...authData
-        });
-      } catch (error) {
-        return errorResponse('Invalid refresh token', 401);
-      }
+      const decoded = verifyRefreshToken(refreshToken);
+      if (!decoded) return errorResponse('Invalid refresh token', 401);
+      const payload = { id: decoded.id, email: decoded.email, role: decoded.role };
+      const newAccessToken = createAccessToken(payload);
+      const newRefreshToken = createRefreshToken(payload);
+      const authData = setAuthCookies(null, newAccessToken, newRefreshToken);
+      return successResponse({ ...authData });
     }
 
     // Handle unsupported methods or paths

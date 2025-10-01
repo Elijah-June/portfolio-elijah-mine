@@ -1,5 +1,5 @@
 import { schedule } from '@netlify/functions';
-import { query } from '../../server/src/db.js';
+import { query } from './utils/db.js';
 
 async function run() {
   const now = new Date();
