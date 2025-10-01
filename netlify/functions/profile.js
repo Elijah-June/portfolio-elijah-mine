@@ -1,5 +1,5 @@
 import { query, successResponse, errorResponse } from './utils/db.js';
-import { verifyToken } from './utils/auth.js';
+import { verifyAccessTokenFromHeader } from './utils/auth.js';
 
 export const handler = async (event, context) => {
   // Handle CORS preflight
@@ -17,7 +17,8 @@ export const handler = async (event, context) => {
 
   const path = event.path.replace('/.netlify/functions/profile', '');
   const pathSegments = path.split('/').filter(Boolean);
-  const isAdmin = event.headers.authorization ? await verifyToken(event.headers.authorization) : false;
+  const decoded = verifyAccessTokenFromHeader(event.headers.authorization || '');
+  const isAdmin = !!(decoded && decoded.role === 'admin');
 
   try {
     // GET /profile

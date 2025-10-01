@@ -1,6 +1,6 @@
 import { query, successResponse, errorResponse } from './utils/db.js';
 import slugify from 'slugify';
-import { verifyToken } from './utils/auth.js';
+import { verifyAccessTokenFromHeader } from './utils/auth.js';
 
 // Helper function to handle query params
 const parseQueryParams = (queryString) => {
@@ -31,7 +31,8 @@ export const handler = async (event, context) => {
 
   const path = event.path.replace('/.netlify/functions/blogs', '');
   const pathSegments = path.split('/').filter(Boolean);
-  const isAdmin = event.headers.authorization ? await verifyToken(event.headers.authorization) : false;
+  const decoded = verifyAccessTokenFromHeader(event.headers.authorization || '');
+  const isAdmin = !!(decoded && decoded.role === 'admin');
 
   try {
     // GET /blogs
@@ -187,6 +188,61 @@ export const handler = async (event, context) => {
       
       if (rows.length === 0) return errorResponse('Comment not found', 404);
       return successResponse(rows[0]);
+    }
+
+    // POST /blogs/comments/:commentId/reactions
+    if (
+      event.httpMethod === 'POST' &&
+      pathSegments.length === 3 &&
+      pathSegments[0] === 'comments' &&
+      pathSegments[2] === 'reactions'
+    ) {
+      const commentId = Number(pathSegments[1]);
+      const { type } = JSON.parse(event.body || '{}');
+      if (!commentId || !type) return errorResponse('commentId and type are required', 400);
+
+      // Upsert reaction count
+      try {
+        await query(
+          `INSERT INTO comment_reactions (comment_id, type, count)
+           VALUES ($1, $2, 1)
+           ON CONFLICT (comment_id, type) DO UPDATE SET count = comment_reactions.count + 1`,
+          [commentId, String(type)]
+        );
+      } catch (err) {
+        // Fallback if unique constraint doesn't exist
+        try {
+          const { rows: exists } = await query(
+            'SELECT count FROM comment_reactions WHERE comment_id=$1 AND type=$2',
+            [commentId, String(type)]
+          );
+          if (exists.length === 0) {
+            await query(
+              'INSERT INTO comment_reactions (comment_id, type, count) VALUES ($1, $2, 1)',
+              [commentId, String(type)]
+            );
+          } else {
+            await query(
+              'UPDATE comment_reactions SET count = count + 1 WHERE comment_id=$1 AND type=$2',
+              [commentId, String(type)]
+            );
+          }
+        } catch (err2) {
+          console.error('Error updating reactions:', err2);
+          return errorResponse('Internal server error', 500);
+        }
+      }
+
+      // Return full reactions map for the comment
+      const { rows: reactions } = await query(
+        'SELECT type, count FROM comment_reactions WHERE comment_id=$1',
+        [commentId]
+      );
+      const map = reactions.reduce((acc, r) => {
+        acc[r.type] = Number(r.count);
+        return acc;
+      }, {});
+      return successResponse(map);
     }
 
     // Handle unsupported methods or paths
