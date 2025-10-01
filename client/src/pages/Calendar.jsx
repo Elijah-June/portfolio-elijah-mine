@@ -22,7 +22,13 @@ export default function CalendarPage() {
   useEffect(() => {
     api(`/api/activity?year=${year}&month=${month}`).then(rows => {
       const map = {};
-      for (const r of rows) map[r.date] = r.active;
+      for (const r of rows) {
+        // r.date may be an ISO string like '2025-09-30T16:00:00.000Z' or '2025-10-01'
+        const key = typeof r.date === 'string'
+          ? r.date.slice(0, 10)
+          : new Date(r.date).toISOString().slice(0, 10);
+        map[key] = r.active;
+      }
       setActivity(map);
     }).catch(() => setActivity({}));
   }, [year, month]);
@@ -58,7 +64,10 @@ export default function CalendarPage() {
   const saveToggle = useDebouncedCallback(async (key, next) => {
     try {
       const row = await api(`/api/activity/${key}`, { method: 'PUT', data: { active: next } });
-      setActivity(a => ({ ...a, [row.date]: row.active }));
+      const norm = typeof row.date === 'string'
+        ? row.date.slice(0, 10)
+        : new Date(row.date).toISOString().slice(0, 10);
+      setActivity(a => ({ ...a, [norm]: row.active }));
     } catch (e) {
       // revert on error
       setActivity(a => ({ ...a, [key]: !next }));
@@ -68,6 +77,8 @@ export default function CalendarPage() {
   function toggleDay(d) {
     if (!isAdmin || !d) return;
     const key = `${year}-${pad(month)}-${pad(d)}`;
+    // select the day in range controls so buttons can apply to it
+    setRange({ start: key, end: key });
     const next = !activity[key];
     // optimistic update
     setActivity(a => ({ ...a, [key]: next }));
@@ -98,13 +109,32 @@ export default function CalendarPage() {
 
   // Bulk range controls
   const [range, setRange] = useState({ start: '', end: '' });
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
   async function applyRange(active) {
-    if (!isAdmin || !range.start || !range.end) return;
-    await api('/api/activity/bulk', { method: 'POST', data: { start: range.start, end: range.end, active } });
-    // refetch month
-    api(`/api/activity?year=${year}&month=${month}`).then(rows => {
-      const map = {}; for (const r of rows) map[r.date] = r.active; setActivity(map);
-    });
+    setMsg(''); setErr('');
+    if (!isAdmin) return;
+    if (!range.start && !range.end) {
+      setErr('Please select Start and End dates.');
+      return;
+    }
+    try {
+      setBusy(true);
+      const start = range.start || range.end;
+      const end = range.end || range.start; // allow single-day apply when one is missing
+      await api('/api/activity/bulk', { method: 'POST', data: { start, end, active } });
+      setMsg(active ? 'Days set to Active.' : 'Days set to Inactive.');
+      // refetch month
+      api(`/api/activity?year=${year}&month=${month}`).then(rows => {
+        const map = {}; for (const r of rows) map[typeof r.date==='string'?r.date.slice(0,10):new Date(r.date).toISOString().slice(0,10)] = r.active; setActivity(map);
+      });
+    } catch (e) {
+      setErr(e?.message || 'Failed to apply range');
+    } finally {
+      setBusy(false);
+      setTimeout(() => setMsg(''), 1500);
+    }
   }
 
   function exportCSV() {
@@ -138,11 +168,11 @@ export default function CalendarPage() {
               onClick={() => toggleDay(d)}
               className={
                 `h-20 rounded border flex flex-col items-center justify-between p-2 transition-colors ` +
-                (isActive ? 'bg-emerald-500/20 border-emerald-400/50' : 'bg-white/5 border-white/10 hover:bg-white/10')
+                (isActive ? 'bg-emerald-600/30 border-emerald-400/70 hover:bg-emerald-600/40' : 'bg-white/5 border-white/10 hover:bg-white/10')
               }
               title={isAdmin ? 'Toggle active' : undefined}
             >
-              <div className="self-end text-xs text-gray-300">{d}</div>
+              <div className={`self-end text-xs ${isActive ? 'text-emerald-200' : 'text-gray-300'}`}>{d}</div>
               <div className="h-2">
                 {hasEvent && <span className="inline-block w-2 h-2 rounded-full bg-blue-400" />}
               </div>
@@ -173,8 +203,26 @@ export default function CalendarPage() {
             <label className="block text-gray-400 text-xs mb-1">End</label>
             <input type="date" className="border border-white/10 bg-white/5 text-white px-2 py-1 rounded" value={range.end} onChange={e => setRange(r => ({ ...r, end: e.target.value }))} />
           </div>
-          <button className="px-3 py-2 rounded bg-emerald-500/20 border border-emerald-400/40 hover:bg-emerald-500/30" onClick={() => applyRange(true)}>Set Active</button>
-          <button className="px-3 py-2 rounded bg-white/10 border border-white/20 hover:bg-white/20" onClick={() => applyRange(false)}>Set Inactive</button>
+          <button
+            className={`px-3 py-2 rounded border hover:opacity-90 ${busy ? 'opacity-60 cursor-not-allowed' : ''} ${(!range.start||!range.end)?'opacity-60 cursor-not-allowed':''} bg-emerald-500/20 border-emerald-400/40`}
+            onClick={() => applyRange(true)}
+            disabled={busy || !range.start || !range.end}
+          >
+            {busy ? 'Working…' : 'Set Active'}
+          </button>
+          <button
+            className={`px-3 py-2 rounded border hover:opacity-90 ${busy ? 'opacity-60 cursor-not-allowed' : ''} ${(!range.start||!range.end)?'opacity-60 cursor-not-allowed':''} bg-white/10 border-white/20`}
+            onClick={() => applyRange(false)}
+            disabled={busy || !range.start || !range.end}
+          >
+            {busy ? 'Working…' : 'Set Inactive'}
+          </button>
+          {(msg || err) && (
+            <div className="w-full text-xs">
+              {msg && <span className="text-emerald-300">{msg}</span>}
+              {err && <span className="text-red-400">{err}</span>}
+            </div>
+          )}
         </div>
       )}
     </div>

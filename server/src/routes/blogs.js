@@ -71,7 +71,7 @@ router.get('/:id/comments', async (req, res) => {
   const id = Number(req.params.id);
   // Only approved by default
   const { rows } = await query(
-    `SELECT id, blog_id, author_name, body, image_url, approved, created_at FROM comments
+    `SELECT id, blog_id, author_name, body, approved, created_at FROM comments
      WHERE blog_id=$1 AND approved=TRUE ORDER BY created_at ASC`,
     [id]
   );
@@ -92,16 +92,16 @@ router.get('/:id/comments', async (req, res) => {
 
 router.post('/:id/comments', async (req, res) => {
   const blogId = Number(req.params.id);
-  let { author_name, body, image_url } = req.body ?? {};
+  let { author_name, body } = req.body ?? {};
   if (!body || typeof body !== 'string' || body.trim().length === 0) {
     return res.status(400).json({ error: 'body is required' });
   }
   const name = (author_name && String(author_name).trim().length > 0) ? String(author_name).trim() : 'guest';
   const { rows } = await query(
-    `INSERT INTO comments (blog_id, author_name, body, image_url, approved)
-     VALUES ($1, $2, $3, $4, TRUE)
-     RETURNING id, blog_id, author_name, body, image_url, approved, created_at`,
-    [blogId, name, body, image_url ?? null]
+    `INSERT INTO comments (blog_id, author_name, body, approved)
+     VALUES ($1, $2, $3, TRUE)
+     RETURNING id, blog_id, author_name, body, approved, created_at`,
+    [blogId, name, body]
   );
   res.status(201).json({ ...rows[0], reactions: {} });
 });
@@ -110,7 +110,7 @@ router.post('/:id/comments', async (req, res) => {
 router.get('/:id/comments/all', requireAuth, requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const { rows } = await query(
-    `SELECT id, blog_id, author_name, body, image_url, approved, created_at FROM comments
+    `SELECT id, blog_id, author_name, body, approved, created_at FROM comments
      WHERE blog_id=$1 ORDER BY created_at ASC`,
     [id]
   );
@@ -164,12 +164,49 @@ router.post('/comments/:commentId/reactions', async (req, res) => {
   const commentId = Number(req.params.commentId);
   const { type } = req.body ?? {};
   if (!type || typeof type !== 'string') return res.status(400).json({ error: 'type required' });
-  await query(
-    `INSERT INTO comment_reactions (comment_id, type, count)
-     VALUES ($1, $2, 1)
-     ON CONFLICT (comment_id, type) DO UPDATE SET count = comment_reactions.count + 1`,
-    [commentId, type]
+  const userId = req.user?.id || null;
+  const anonId = req.cookies?.anon_id || null;
+  if (!userId && !anonId) return res.status(400).json({ error: 'no voter id' });
+
+  // Find existing vote for this comment by this user/anon (any type)
+  const { rows: existingRows } = await query(
+    `SELECT id, type FROM comment_reaction_votes
+     WHERE comment_id=$1 AND (user_id IS NOT DISTINCT FROM $2 OR anon_id IS NOT DISTINCT FROM $3)
+     LIMIT 1`,
+    [commentId, userId, anonId]
   );
+  const existing = existingRows[0];
+  if (!existing) {
+    // First time vote: insert vote and increment count for selected type
+    await query(
+      `INSERT INTO comment_reaction_votes (comment_id, type, user_id, anon_id)
+       VALUES ($1, $2, $3, $4)`,
+      [commentId, type, userId, anonId]
+    );
+    await query(
+      `INSERT INTO comment_reactions (comment_id, type, count)
+       VALUES ($1, $2, 1)
+       ON CONFLICT (comment_id, type) DO UPDATE SET count = comment_reactions.count + 1`,
+      [commentId, type]
+    );
+  } else if (existing.type !== type) {
+    // Switch vote: decrement old type (not below 0), increment new, update vote row
+    await query('UPDATE comment_reaction_votes SET type=$2 WHERE id=$1', [existing.id, type]);
+    await query(
+      `UPDATE comment_reactions SET count = GREATEST(count - 1, 0)
+       WHERE comment_id=$1 AND type=$2`,
+      [commentId, existing.type]
+    );
+    await query(
+      `INSERT INTO comment_reactions (comment_id, type, count)
+       VALUES ($1, $2, 1)
+       ON CONFLICT (comment_id, type) DO UPDATE SET count = comment_reactions.count + 1`,
+      [commentId, type]
+    );
+  } else {
+    // Same type clicked again: no-op
+  }
+
   const { rows } = await query(
     `SELECT type, count FROM comment_reactions WHERE comment_id=$1`,
     [commentId]

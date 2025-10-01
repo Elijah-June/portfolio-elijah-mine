@@ -71,6 +71,19 @@ CREATE TABLE IF NOT EXISTS comment_reactions (
 );
 CREATE INDEX IF NOT EXISTS idx_comment_reactions_comment_id ON comment_reactions(comment_id);
 
+-- One-reaction-per-user tracking (user or anonymous device)
+CREATE TABLE IF NOT EXISTS comment_reaction_votes (
+  id SERIAL PRIMARY KEY,
+  comment_id INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  anon_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT one_vote_user UNIQUE (comment_id, type, user_id),
+  CONSTRAINT one_vote_anon UNIQUE (comment_id, type, anon_id)
+);
+CREATE INDEX IF NOT EXISTS idx_comment_reaction_votes_comment_id ON comment_reaction_votes(comment_id);
+
 -- Events (link to blog/project/note via ref_type/ref_id)
 CREATE TABLE IF NOT EXISTS events (
   id SERIAL PRIMARY KEY,

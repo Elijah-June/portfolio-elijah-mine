@@ -10,7 +10,8 @@ export default function BlogPost() {
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [form, setForm] = useState({ author_name: '', body: '' });
-  const [file, setFile] = useState(null);
+  const [animKey, setAnimKey] = useState(null); // `${commentId}:${type}` for click animation
+  const [pendingKey, setPendingKey] = useState(null); // prevent double-click
   const [error, setError] = useState('');
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
@@ -28,17 +29,9 @@ export default function BlogPost() {
     e.preventDefault();
     setError('');
     try {
-      let image_url = null;
-      if (file) {
-        const fd = new FormData();
-        fd.append('image', file);
-        const up = await api('/api/uploads', { method: 'POST', body: fd });
-        image_url = up.url; // '/uploads/...'
-      }
-      const c = await api(`/api/blogs/${post.id}/comments`, { method: 'POST', data: { ...form, image_url } });
+      const c = await api(`/api/blogs/${post.id}/comments`, { method: 'POST', data: { ...form } });
       setComments(prev => [...prev, c]);
       setForm({ author_name: '', body: '' });
-      setFile(null);
     } catch (err) {
       setError(err.message || 'Error');
     }
@@ -66,9 +59,24 @@ export default function BlogPost() {
     }
   }
 
+  const REACTIONS = [
+    { type: 'like', emoji: '👍' },
+    { type: 'heart', emoji: '❤️' },
+    { type: 'clap', emoji: '👏' },
+  ];
+
   async function react(commentId, type) {
-    const obj = await api(`/api/blogs/comments/${commentId}/reactions`, { method: 'POST', data: { type } });
-    setComments(cs => cs.map(c => c.id === commentId ? { ...c, reactions: obj } : c));
+    const key = `${commentId}:${type}`;
+    if (pendingKey === key) return;
+    setPendingKey(key);
+    setAnimKey(key);
+    try {
+      const obj = await api(`/api/blogs/comments/${commentId}/reactions`, { method: 'POST', data: { type } });
+      setComments(cs => cs.map(c => c.id === commentId ? { ...c, reactions: obj } : c));
+    } finally {
+      setTimeout(() => setAnimKey(null), 180);
+      setPendingKey(null);
+    }
   }
 
   if (!post) return <div>Loading...</div>;
@@ -107,10 +115,6 @@ export default function BlogPost() {
             value={form.body}
             onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
           />
-          <div className="flex items-center justify-between gap-3">
-            <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)} className="text-sm" />
-            {file && <span className="text-xs text-gray-400">{file.name}</span>}
-          </div>
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <button className="px-4 py-2 bg-white text-black rounded">Post Comment</button>
         </form>
@@ -120,19 +124,23 @@ export default function BlogPost() {
             <div key={c.id} className="border border-white/10 rounded p-3 bg-white/5">
               <div className="text-sm font-medium text-white">{c.author_name}</div>
               <div className="text-sm text-gray-200">{c.body}</div>
-              {c.image_url && (
-                <div className="mt-2">
-                  <img src={`${API_BASE}${c.image_url}`} alt="" className="max-h-64 rounded border border-white/10" />
-                </div>
-              )}
               <div className="text-xs text-gray-400">{new Date(c.created_at).toLocaleString()}</div>
               <div className="mt-2 flex items-center gap-2 text-sm">
-                {['like','heart','clap'].map(t => (
-                  <button key={t} className="px-2 py-1 rounded bg-white/10 hover:bg-white/20"
-                    onClick={() => react(c.id, t)}>
-                    {t} {c.reactions?.[t] ? c.reactions[t] : 0}
-                  </button>
-                ))}
+                {REACTIONS.map(({ type: t, emoji }) => {
+                  const k = `${c.id}:${t}`;
+                  const active = animKey === k;
+                  return (
+                    <button
+                      key={t}
+                      className={`px-2 py-1 rounded bg-white/10 hover:bg-white/20 transition-transform duration-150 ${active ? 'scale-110' : ''}`}
+                      onClick={() => react(c.id, t)}
+                      disabled={pendingKey === k}
+                    >
+                      <span className="mr-1">{emoji}</span>
+                      {c.reactions?.[t] ? c.reactions[t] : 0}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}
