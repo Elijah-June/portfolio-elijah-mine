@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
+import { useToast } from '../../context/ToastContext.jsx';
 
 export default function AdminCV() {
+  const toast = useToast();
   const [form, setForm] = useState({
     summary: '',
     education: { items: [] },
@@ -50,6 +52,7 @@ export default function AdminCV() {
     try {
       const res = await api('/api/cv', { method: 'PUT', data: form });
       setMessage('Saved successfully');
+      toast.add('CV saved', { type: 'success' });
       setForm({
         summary: res.summary || '',
         education: res.education || { items: [] },
@@ -59,6 +62,7 @@ export default function AdminCV() {
       });
     } catch (e) {
       setMessage(e?.message || 'Failed to save');
+      toast.add(e?.message || 'Failed to save CV', { type: 'error' });
     } finally {
       setSaving(false);
     }

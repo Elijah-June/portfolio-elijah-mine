@@ -8,6 +8,31 @@ import {
   verifyRefreshToken
 } from './utils/auth.js';
 
+function parseBody(event) {
+  const raw = event.body || '';
+  const ct = (event.headers['content-type'] || event.headers['Content-Type'] || '').toLowerCase();
+  try {
+    if (ct.includes('application/json')) {
+      return JSON.parse(raw || '{}');
+    }
+    if (ct.includes('application/x-www-form-urlencoded')) {
+      const params = new URLSearchParams(raw);
+      const obj = {};
+      for (const [k, v] of params.entries()) obj[k] = v;
+      return obj;
+    }
+    // Try JSON first, fallback to URL-encoded
+    try { return JSON.parse(raw); } catch {}
+    try {
+      const params = new URLSearchParams(raw);
+      const obj = {};
+      for (const [k, v] of params.entries()) obj[k] = v;
+      return obj;
+    } catch {}
+  } catch {}
+  return {};
+}
+
 // In Netlify we return tokens in the response; client can store them
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -49,7 +74,7 @@ export const handler = async (event, context) => {
   try {
     // POST /auth/login
     if (event.httpMethod === 'POST' && endpoint === 'login') {
-      const { email, password } = JSON.parse(event.body || '{}');
+      const { email, password } = parseBody(event);
       
       if (!email || !password) {
         return errorResponse('Email and password are required', 400);
@@ -111,7 +136,7 @@ export const handler = async (event, context) => {
 
     // POST /auth/refresh
     if (event.httpMethod === 'POST' && endpoint === 'refresh') {
-      const { refreshToken } = JSON.parse(event.body || '{}');
+      const { refreshToken } = parseBody(event);
       
       if (!refreshToken) {
         return errorResponse('Refresh token is required', 400);

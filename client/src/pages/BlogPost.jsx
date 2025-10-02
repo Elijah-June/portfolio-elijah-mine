@@ -4,6 +4,7 @@ import { api } from '../api/client.js';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
+import { useToast } from '../context/ToastContext.jsx';
 
 export default function BlogPost() {
   const { slug } = useParams();
@@ -14,6 +15,7 @@ export default function BlogPost() {
   const [pendingKey, setPendingKey] = useState(null); // prevent double-click
   const [error, setError] = useState('');
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+  const toast = useToast();
 
   useEffect(() => {
     api(`/api/blogs/${slug}`).then(setPost);
@@ -32,8 +34,10 @@ export default function BlogPost() {
       const c = await api(`/api/blogs/${post.id}/comments`, { method: 'POST', data: { ...form } });
       setComments(prev => [...prev, c]);
       setForm({ author_name: '', body: '' });
+      toast.add('Comment posted!', { type: 'success' });
     } catch (err) {
       setError(err.message || 'Error');
+      toast.add(err.message || 'Failed to post comment', { type: 'error' });
     }
   }
 

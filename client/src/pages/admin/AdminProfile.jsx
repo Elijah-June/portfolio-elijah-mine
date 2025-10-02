@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
+import { useToast } from '../../context/ToastContext.jsx';
 
 export default function AdminProfile() {
   const [form, setForm] = useState({ display_name: '', title: '', bio: '', avatar_url: '', social_links: '{}', education: '', expertise: '', profile_summary: '' });
   const [msg, setMsg] = useState('');
+  const toast = useToast();
 
   useEffect(() => {
     api('/api/profile').then(p => {
@@ -26,9 +28,14 @@ export default function AdminProfile() {
     let social = {};
     try { social = JSON.parse(form.social_links || '{}'); } catch (e) { alert('Invalid social_links JSON'); return; }
     const payload = { ...form, social_links: social };
-    const p = await api('/api/profile', { method: 'PUT', data: payload });
-    setMsg('Saved!');
-    setForm(f => ({ ...f, social_links: JSON.stringify(p.social_links || {}, null, 2) }));
+    try {
+      const p = await api('/api/profile', { method: 'PUT', data: payload });
+      setMsg('Saved!');
+      toast.add('Profile saved', { type: 'success' });
+      setForm(f => ({ ...f, social_links: JSON.stringify(p.social_links || {}, null, 2) }));
+    } catch (err) {
+      toast.add(err?.message || 'Failed to save profile', { type: 'error' });
+    }
   }
 
   return (
