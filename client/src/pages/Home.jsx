@@ -53,8 +53,8 @@ export default function Home() {
                 {profile?.social_links?.twitter && (
                   <a className="px-4 py-2 rounded border border-white/20 hover:bg-white/10 transition text-gray-200" href={profile.social_links.twitter} target="_blank" rel="noreferrer">Twitter</a>
                 )}
-                {profile?.social_links?.cv && (
-                  <a className="px-4 py-2 rounded border border-white/20 hover:bg-white/10 transition text-gray-200" href={profile.social_links.cv} target="_blank" rel="noreferrer">CV</a>
+                {(profile?.social_links?.cv || profile?.social_links?.cv_url) && (
+                  <a className="px-4 py-2 rounded border border-white/20 hover:bg-white/10 transition text-gray-200" href={profile.social_links.cv || profile.social_links.cv_url} target="_blank" rel="noreferrer">CV</a>
                 )}
               </div>
             </Animate>
