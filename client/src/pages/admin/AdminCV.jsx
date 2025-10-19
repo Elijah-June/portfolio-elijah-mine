@@ -4,13 +4,11 @@ import { useToast } from '../../context/ToastContext.jsx';
 
 export default function AdminCV() {
   const toast = useToast();
-  const [form, setForm] = useState({
-    summary: '',
-    education: { items: [] },
-    experience: { items: [] },
-    skills: { items: [] },
-    certifications: { items: [] },
-  });
+  const [form, setForm] = useState({ summary: '' });
+  const [educationText, setEducationText] = useState('');
+  const [experienceText, setExperienceText] = useState('');
+  const [skillsText, setSkillsText] = useState('');
+  const [certsText, setCertsText] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -20,13 +18,18 @@ export default function AdminCV() {
       try {
         const existing = await api('/api/cv');
         if (existing) {
-          setForm({
-            summary: existing.summary || '',
-            education: existing.education || { items: [] },
-            experience: existing.experience || { items: [] },
-            skills: existing.skills || { items: [] },
-            certifications: existing.certifications || { items: [] },
+          setForm({ summary: existing.summary || '' });
+          const eduItems = (existing.education?.items || []).map(i => `${i.degree || ''} | ${i.field || ''} | ${i.institution || ''} | ${i.period || ''}`.trim());
+          setEducationText(eduItems.join('\n'));
+          const expItems = (existing.experience?.items || []).map(i => {
+            const details = Array.isArray(i.details) ? i.details.join('; ') : '';
+            return `${i.role || ''} | ${i.company || ''} | ${i.period || ''} | ${details}`.trim();
           });
+          setExperienceText(expItems.join('\n'));
+          const skillItems = (existing.skills?.items || []).join(', ');
+          setSkillsText(skillItems);
+          const certItems = (existing.certifications?.items || []).map(i => `${i.name || ''} | ${i.issuer || ''} | ${i.date || ''}`.trim());
+          setCertsText(certItems.join('\n'));
         }
       } catch (e) {
         // ignore if not existing yet
@@ -41,25 +44,60 @@ export default function AdminCV() {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  const handleJsonChange = (name, value) => {
-    setForm((f) => ({ ...f, [name]: value }));
-  };
-
   const onSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     setMessage('');
     try {
-      const res = await api('/api/cv', { method: 'PUT', data: form });
+      const education = {
+        items: (educationText || '')
+          .split(/\n+/)
+          .map(l => l.trim())
+          .filter(Boolean)
+          .map(line => {
+            const [degree = '', field = '', institution = '', period = ''] = line.split('|').map(s => s.trim());
+            return { degree, field, institution, period };
+          })
+      };
+      const experience = {
+        items: (experienceText || '')
+          .split(/\n+/)
+          .map(l => l.trim())
+          .filter(Boolean)
+          .map(line => {
+            const [role = '', company = '', period = '', detailsStr = ''] = line.split('|').map(s => s.trim());
+            const details = detailsStr ? detailsStr.split(';').map(s => s.trim()).filter(Boolean) : [];
+            return { role, company, period, details };
+          })
+      };
+      const skills = { items: (skillsText || '').split(',').map(s => s.trim()).filter(Boolean) };
+      const certifications = {
+        items: (certsText || '')
+          .split(/\n+/)
+          .map(l => l.trim())
+          .filter(Boolean)
+          .map(line => {
+            const [name = '', issuer = '', date = ''] = line.split('|').map(s => s.trim());
+            return { name, issuer, date };
+          })
+      };
+
+      const payload = { summary: form.summary, education, experience, skills, certifications };
+      const res = await api('/api/cv', { method: 'PUT', data: payload });
       setMessage('Saved successfully');
       toast.add('CV saved', { type: 'success' });
-      setForm({
-        summary: res.summary || '',
-        education: res.education || { items: [] },
-        experience: res.experience || { items: [] },
-        skills: res.skills || { items: [] },
-        certifications: res.certifications || { items: [] },
+      setForm({ summary: res.summary || '' });
+      const eduItems = (res.education?.items || []).map(i => `${i.degree || ''} | ${i.field || ''} | ${i.institution || ''} | ${i.period || ''}`.trim());
+      setEducationText(eduItems.join('\n'));
+      const expItems = (res.experience?.items || []).map(i => {
+        const details = Array.isArray(i.details) ? i.details.join('; ') : '';
+        return `${i.role || ''} | ${i.company || ''} | ${i.period || ''} | ${details}`.trim();
       });
+      setExperienceText(expItems.join('\n'));
+      const skillItems2 = (res.skills?.items || []).join(', ');
+      setSkillsText(skillItems2);
+      const certItems = (res.certifications?.items || []).map(i => `${i.name || ''} | ${i.issuer || ''} | ${i.date || ''}`.trim());
+      setCertsText(certItems.join('\n'));
     } catch (e) {
       setMessage(e?.message || 'Failed to save');
       toast.add(e?.message || 'Failed to save CV', { type: 'error' });
@@ -86,33 +124,41 @@ export default function AdminCV() {
           />
         </div>
 
-        <JsonEditor
-          label="Education (JSON)"
-          value={form.education}
-          onChange={(v) => handleJsonChange('education', v)}
-          example={{ items: [{ degree: 'BSc', field: 'CS', institution: 'University', period: '2018-2022' }] }}
-        />
+        <div>
+          <label className="block text-gray-300 mb-2">Education (one per line: degree | field | institution | period)</label>
+          <textarea
+            value={educationText}
+            onChange={(e) => setEducationText(e.target.value)}
+            className="w-full p-3 rounded bg-black/40 border border-white/10 text-gray-100 font-mono min-h-[140px]"
+          />
+        </div>
 
-        <JsonEditor
-          label="Experience (JSON)"
-          value={form.experience}
-          onChange={(v) => handleJsonChange('experience', v)}
-          example={{ items: [{ role: 'Software Engineer', company: 'Acme', period: '2022-Present', details: ['Built X', 'Shipped Y'] }] }}
-        />
+        <div>
+          <label className="block text-gray-300 mb-2">Experience (one per line: role | company | period | details; details; ...)</label>
+          <textarea
+            value={experienceText}
+            onChange={(e) => setExperienceText(e.target.value)}
+            className="w-full p-3 rounded bg-black/40 border border-white/10 text-gray-100 font-mono min-h-[160px]"
+          />
+        </div>
 
-        <JsonEditor
-          label="Skills (JSON)"
-          value={form.skills}
-          onChange={(v) => handleJsonChange('skills', v)}
-          example={{ items: ['JavaScript', 'React', 'Node.js'] }}
-        />
+        <div>
+          <label className="block text-gray-300 mb-2">Skills (comma separated)</label>
+          <textarea
+            value={skillsText}
+            onChange={(e) => setSkillsText(e.target.value)}
+            className="w-full p-3 rounded bg-black/40 border border-white/10 text-gray-100 font-mono min-h-[80px]"
+          />
+        </div>
 
-        <JsonEditor
-          label="Certifications (JSON)"
-          value={form.certifications}
-          onChange={(v) => handleJsonChange('certifications', v)}
-          example={{ items: [{ name: 'AWS CCP', issuer: 'Amazon', date: '2024' }] }}
-        />
+        <div>
+          <label className="block text-gray-300 mb-2">Certifications (one per line: name | issuer | date)</label>
+          <textarea
+            value={certsText}
+            onChange={(e) => setCertsText(e.target.value)}
+            className="w-full p-3 rounded bg-black/40 border border-white/10 text-gray-100 font-mono min-h-[120px]"
+          />
+        </div>
 
         <button
           type="submit"
@@ -122,48 +168,6 @@ export default function AdminCV() {
           {saving ? 'Saving...' : 'Save CV'}
         </button>
       </form>
-    </div>
-  );
-}
-
-function JsonEditor({ label, value, onChange, example }) {
-  const [text, setText] = useState(JSON.stringify(value, null, 2));
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    setText(JSON.stringify(value, null, 2));
-  }, [value]);
-
-  const onTextChange = (e) => {
-    const t = e.target.value;
-    setText(t);
-    try {
-      const parsed = JSON.parse(t || '{}');
-      setError('');
-      onChange(parsed);
-    } catch (err) {
-      setError('Invalid JSON');
-    }
-  };
-
-  return (
-    <div>
-      <div className="flex items-center justify-between">
-        <label className="block text-gray-300 mb-2">{label}</label>
-        <button
-          type="button"
-          onClick={() => setText(JSON.stringify(example, null, 2))}
-          className="text-xs px-2 py-1 rounded bg-white/10 border border-white/10 text-gray-200"
-        >
-          Fill Example
-        </button>
-      </div>
-      <textarea
-        value={text}
-        onChange={onTextChange}
-        className="w-full p-3 rounded bg-black/40 border border-white/10 text-gray-100 font-mono min-h-[180px]"
-      />
-      {error && <div className="text-red-400 text-sm mt-1">{error}</div>}
     </div>
   );
 }

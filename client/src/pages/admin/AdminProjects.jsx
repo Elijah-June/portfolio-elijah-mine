@@ -16,7 +16,7 @@ export default function AdminProjects() {
   async function create(e) {
     e.preventDefault();
     setError('');
-    const payload = { ...form, tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [] };
+    const payload = { ...form, image_url: form.image_url?.trim() || null, tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [] };
     try {
       const p = await api('/api/projects', { method: 'POST', data: payload });
       setProjects(prev => [p, ...prev]);
@@ -37,7 +37,7 @@ export default function AdminProjects() {
       <h1 className="text-xl font-semibold">Projects</h1>
       <form className="grid md:grid-cols-2 gap-3 border border-white/10 rounded p-4 bg-white/5" onSubmit={create}>
         <input className="border border-white/10 bg-white/5 text-white placeholder:text-gray-400 px-3 py-2 rounded" placeholder="Title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
-        <input className="border border-white/10 bg-white/5 text-white placeholder:text-gray-400 px-3 py-2 rounded" placeholder="Tags (comma separated)" value={form.tags} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} />
+        <input className="border border-white/10 bg-white/5 text-white placeholder:text-gray-400 px-3 py-2 rounded" placeholder="Tech stack (comma separated)" value={form.tags} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} />
         <input className="border border-white/10 bg-white/5 text-white placeholder:text-gray-400 px-3 py-2 rounded" placeholder="Repo URL" value={form.repo_url} onChange={e => setForm(f => ({ ...f, repo_url: e.target.value }))} />
         <input className="border border-white/10 bg-white/5 text-white placeholder:text-gray-400 px-3 py-2 rounded" placeholder="Demo URL" value={form.demo_url} onChange={e => setForm(f => ({ ...f, demo_url: e.target.value }))} />
         <input className="border border-white/10 bg-white/5 text-white placeholder:text-gray-400 px-3 py-2 rounded md:col-span-2" placeholder="Image URL" value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} />
