@@ -38,9 +38,24 @@ export default function Home() {
               <Animate type="fade" delay={120}><p className="text-gray-300/90 mt-4 max-w-2xl">{profile.bio}</p></Animate>
             )}
             <Animate type="zoom" delay={160}>
-              <div className="mt-6 flex gap-3">
+              <div className="mt-6 flex flex-wrap gap-3">
                 <Link className="px-5 py-2 rounded bg-white text-black font-medium hover:opacity-90 transition" to="/projects">View Projects</Link>
                 <Link className="px-5 py-2 rounded border border-white/20 hover:bg-white/10 transition" to="/blog">Read Blog</Link>
+                {profile?.social_links?.website && (
+                  <a className="px-4 py-2 rounded border border-white/20 hover:bg-white/10 transition text-gray-200" href={profile.social_links.website} target="_blank" rel="noreferrer">Website</a>
+                )}
+                {profile?.social_links?.github && (
+                  <a className="px-4 py-2 rounded border border-white/20 hover:bg-white/10 transition text-gray-200" href={profile.social_links.github} target="_blank" rel="noreferrer">GitHub</a>
+                )}
+                {profile?.social_links?.linkedin && (
+                  <a className="px-4 py-2 rounded border border-white/20 hover:bg-white/10 transition text-gray-200" href={profile.social_links.linkedin} target="_blank" rel="noreferrer">LinkedIn</a>
+                )}
+                {profile?.social_links?.twitter && (
+                  <a className="px-4 py-2 rounded border border-white/20 hover:bg-white/10 transition text-gray-200" href={profile.social_links.twitter} target="_blank" rel="noreferrer">Twitter</a>
+                )}
+                {profile?.social_links?.cv && (
+                  <a className="px-4 py-2 rounded border border-white/20 hover:bg-white/10 transition text-gray-200" href={profile.social_links.cv} target="_blank" rel="noreferrer">CV</a>
+                )}
               </div>
             </Animate>
           </div>
