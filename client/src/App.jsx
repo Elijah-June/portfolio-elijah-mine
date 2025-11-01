@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import PageTransition from './components/PageTransition.jsx';
@@ -17,8 +17,16 @@ import AdminCV from './pages/admin/AdminCV.jsx';
 import TypingTest from './pages/TypingTest.jsx';
 import NotFound from './pages/NotFound.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import { api } from './api/client.js';
 
 export default function App() {
+  const [footerVisitors, setFooterVisitors] = useState(null);
+
+  useEffect(() => {
+    api('/api/visitors', { method: 'GET' })
+      .then((res) => setFooterVisitors(res?.total ?? null))
+      .catch(() => setFooterVisitors(null));
+  }, []);
   return (
     <div className="min-h-screen flex flex-col">
       <ParticlesBg />
@@ -46,6 +54,9 @@ export default function App() {
       </main>
       <footer className="border-t border-white/10 py-6 text-center text-sm text-gray-400">
         © {new Date().getFullYear()} My Portfolio
+        {footerVisitors !== null && (
+          <span className="ml-4 text-gray-500">Visitors: {footerVisitors}</span>
+        )}
       </footer>
     </div>
   );

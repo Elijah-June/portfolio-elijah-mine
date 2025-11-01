@@ -4,18 +4,35 @@ import Quote from '../components/Quote.jsx';
 import { Link } from 'react-router-dom';
 import Animate from '../components/Animate.jsx';
 import useTypewriter from '../hooks/useTypewriter.js';
+import { useToast } from '../context/ToastContext.jsx';
 
 export default function Home() {
   const [profile, setProfile] = useState(null);
   const typedTitle = useTypewriter(profile?.title || '', 40, true);
   const [visitors, setVisitors] = useState(null);
+  const { add: addToast } = useToast();
 
   useEffect(() => {
     api('/api/profile').then(setProfile).catch(() => setProfile(null));
   }, []);
 
   useEffect(() => {
-    api('/api/visitors').then((res) => setVisitors(res?.total)).catch(() => setVisitors(null));
+    const flag = typeof window !== 'undefined' ? window.localStorage.getItem('hasVisited') : '1';
+    const isFirstVisit = !flag;
+    const method = isFirstVisit ? 'POST' : 'GET';
+    api('/api/visitors', { method })
+      .then((res) => {
+        setVisitors(res?.total ?? null);
+        if (isFirstVisit && typeof window !== 'undefined') {
+          window.localStorage.setItem('hasVisited', '1');
+          if (res?.total != null) {
+            addToast(`Thanks for visiting! You are visitor #${res.total}.`, { type: 'success', duration: 3500 });
+          } else {
+            addToast('Thanks for visiting!', { type: 'success', duration: 3000 });
+          }
+        }
+      })
+      .catch(() => setVisitors(null));
   }, []);
 
   return (
