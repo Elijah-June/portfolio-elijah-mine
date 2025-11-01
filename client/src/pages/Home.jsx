@@ -5,38 +5,58 @@ import { Link } from 'react-router-dom';
 import Animate from '../components/Animate.jsx';
 import useTypewriter from '../hooks/useTypewriter.js';
 import { useToast } from '../context/ToastContext.jsx';
+import { useRef } from 'react';
 
 export default function Home() {
   const [profile, setProfile] = useState(null);
   const typedTitle = useTypewriter(profile?.title || '', 40, true);
   const [visitors, setVisitors] = useState(null);
   const { add: addToast } = useToast();
+  const ran = useRef(false);
 
   useEffect(() => {
     api('/api/profile').then(setProfile).catch(() => setProfile(null));
   }, []);
 
   useEffect(() => {
-    const flag = typeof window !== 'undefined' ? window.localStorage.getItem('hasVisited') : '1';
-    const isFirstVisit = !flag;
-    const method = isFirstVisit ? 'POST' : 'GET';
-    api('/api/visitors', { method })
-      .then((res) => {
-        setVisitors(res?.total ?? null);
-        if (isFirstVisit && typeof window !== 'undefined') {
-          window.localStorage.setItem('hasVisited', '1');
+    if (ran.current) return;
+    ran.current = true;
+    const w = typeof window !== 'undefined' ? window : null;
+    const hasVisited = w ? w.localStorage.getItem('hasVisited') : '1';
+    const sessionGuard = w ? w.sessionStorage.getItem('visitCountedSession') : '1';
+    const isFirstEver = !hasVisited;
+    const shouldPost = isFirstEver && !sessionGuard;
+
+    if (shouldPost) {
+      if (w) w.sessionStorage.setItem('visitCountedSession', '1');
+      api('/api/visitors', { method: 'POST' })
+        .then((res) => {
+          setVisitors(res?.total ?? null);
+          if (w) w.localStorage.setItem('hasVisited', '1');
           if (res?.total != null) {
             addToast(`Thanks for visiting! You are visitor #${res.total}.`, { type: 'success', duration: 3500 });
           } else {
             addToast('Thanks for visiting!', { type: 'success', duration: 3000 });
           }
-        }
-      })
-      .catch(() => setVisitors(null));
+        })
+        .catch(() => {
+          api('/api/visitors', { method: 'GET' })
+            .then((res) => setVisitors(res?.total ?? null))
+            .catch(() => setVisitors(null));
+        });
+    } else {
+      api('/api/visitors', { method: 'GET' })
+        .then((res) => setVisitors(res?.total ?? null))
+        .catch(() => setVisitors(null));
+    }
   }, []);
 
   return (
     <div className="space-y-10">
+      <section className="rounded-xl border border-white/10 bg-white/5 px-6 py-3 flex items-center justify-between">
+        <div className="text-sm text-gray-300 font-medium">Visitor Count</div>
+        <div className="text-base text-white font-semibold">{visitors ?? '—'}</div>
+      </section>
       {/* Hero */}
       <section className="rounded-xl overflow-hidden border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10">
         <div className="px-6 py-12 md:px-12 md:py-16 grid md:grid-cols-3 gap-8 items-center">
