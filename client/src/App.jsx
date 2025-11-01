@@ -18,6 +18,7 @@ import TypingTest from './pages/TypingTest.jsx';
 import NotFound from './pages/NotFound.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { api } from './api/client.js';
+import AdminBlogs from './pages/admin/AdminBlogs.jsx';
 
 export default function App() {
   const [footerVisitors, setFooterVisitors] = useState(null);
@@ -26,6 +27,12 @@ export default function App() {
     api('/api/visitors', { method: 'GET' })
       .then((res) => setFooterVisitors(res?.total ?? null))
       .catch(() => setFooterVisitors(null));
+    const id = setInterval(() => {
+      api('/api/visitors', { method: 'GET' })
+        .then((res) => setFooterVisitors(res?.total ?? null))
+        .catch(() => {});
+    }, 10000);
+    return () => clearInterval(id);
   }, []);
   return (
     <div className="min-h-screen flex flex-col">
@@ -44,6 +51,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/blogs" element={<AdminBlogs />} />
               <Route path="/admin/projects" element={<AdminProjects />} />
               <Route path="/admin/profile" element={<AdminProfile />} />
               <Route path="/admin/cv" element={<AdminCV />} />
