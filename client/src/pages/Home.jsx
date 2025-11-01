@@ -76,11 +76,6 @@ export default function Home() {
                 </p>
               </Animate>
             )}
-            {visitors !== null && (
-              <Animate type="fade" delay={100}>
-                <p className="text-gray-400 mt-2 text-sm">Visitors: {visitors}</p>
-              </Animate>
-            )}
             {profile?.bio && (
               <Animate type="fade" delay={120}><p className="text-gray-300/90 mt-4 max-w-2xl">{profile.bio}</p></Animate>
             )}
