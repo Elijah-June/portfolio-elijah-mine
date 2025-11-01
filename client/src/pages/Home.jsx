@@ -8,9 +8,14 @@ import useTypewriter from '../hooks/useTypewriter.js';
 export default function Home() {
   const [profile, setProfile] = useState(null);
   const typedTitle = useTypewriter(profile?.title || '', 40, true);
+  const [visitors, setVisitors] = useState(null);
 
   useEffect(() => {
     api('/api/profile').then(setProfile).catch(() => setProfile(null));
+  }, []);
+
+  useEffect(() => {
+    api('/api/visitors').then((res) => setVisitors(res?.total)).catch(() => setVisitors(null));
   }, []);
 
   return (
@@ -32,6 +37,11 @@ export default function Home() {
                   {typedTitle}
                   <span className="inline-block w-2 h-5 -mb-1 bg-white/80 ml-1 animate-pulse" />
                 </p>
+              </Animate>
+            )}
+            {visitors !== null && (
+              <Animate type="fade" delay={100}>
+                <p className="text-gray-400 mt-2 text-sm">Visitors: {visitors}</p>
               </Animate>
             )}
             {profile?.bio && (
